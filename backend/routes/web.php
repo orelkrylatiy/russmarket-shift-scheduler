@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
+Route::get('/', fn () => response()->json(['service' => 'russmarket-scheduler', 'status' => 'ok']));
 Route::get('/api/health', fn () => ['status' => 'ok', 'service' => 'russmarket-scheduler']);
 Route::get('/api/schedule', function (Request $request) {
     $week = $request->query('week', '2024-06-03');
