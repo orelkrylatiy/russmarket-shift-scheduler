@@ -9,7 +9,8 @@
 - добавление, редактирование и удаление смен;
 - типы и цветовые состояния смен;
 - применение шаблона;
-- сохранение расписания в `localStorage`;
+- production API на Laravel + SQLite для чтения и изменения смен;
+- offline fallback через `localStorage`;
 - адаптивная рабочая область.
 
 ## Запуск
@@ -25,6 +26,7 @@ Production build:
 npm run build
 ```
 
-## Следующий слой
+## Production
 
-Frontend использует простой локальный storage-адаптер. Для production-сдачи его нужно заменить на Laravel API с сущностями `employees`, `shifts` и `shift_templates`, сохранив тот же контракт данных.
+Frontend обращается к Laravel API по `/russmarket-api/api`; локальное хранилище
+остаётся fallback для работы без сети. Production URL: `https://brainwwave.ru/russmarket/`.

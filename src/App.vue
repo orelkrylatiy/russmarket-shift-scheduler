@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 
 type Shift = { id: number; employee: string; date: string; kind: string; start: string; end: string; color: string }
 const employees = ['Анна Смирнова', 'Иван Петров', 'Мария Кузнецова', 'Алексей Орлов', 'Ольга Волкова']
@@ -20,15 +20,22 @@ const seed: Shift[] = [
 const shifts = ref<Shift[]>(JSON.parse(localStorage.getItem('russmarket-shifts') || 'null') || seed)
 const selectedEmployee = ref(employees[0]); const selectedDate = ref(days[0].key); const showModal = ref(false); const editingId = ref<number | null>(null); const saved = ref(false)
 const form = ref({ kind: 'Утренняя', start: '09:00', end: '18:00', color: 'blue' })
+const apiBase = '/russmarket-api/api'
 const selected = computed(() => shifts.value.find(s => s.id === editingId.value))
 function openCreate(employee: string, date: string) { selectedEmployee.value = employee; selectedDate.value = date; editingId.value = null; form.value = { kind: 'Утренняя', start: '09:00', end: '18:00', color: 'blue' }; showModal.value = true }
 function openEdit(s: Shift) { selectedEmployee.value = s.employee; selectedDate.value = s.date; editingId.value = s.id; form.value = { kind: s.kind, start: s.start, end: s.end, color: s.color }; showModal.value = true }
-function saveShift() { if (editingId.value) { const item = shifts.value.find(s => s.id === editingId.value); if (item) Object.assign(item, form.value, { employee: selectedEmployee.value, date: selectedDate.value }) } else shifts.value.push({ id: Date.now(), employee: selectedEmployee.value, date: selectedDate.value, ...form.value }); showModal.value = false; persist() }
-function removeShift() { shifts.value = shifts.value.filter(s => s.id !== editingId.value); showModal.value = false; persist() }
+async function saveShift() {
+  const payload = { employee: selectedEmployee.value, date: selectedDate.value, ...form.value }
+  if (editingId.value) { const item = shifts.value.find(s => s.id === editingId.value); if (item) Object.assign(item, payload); await fetch(`${apiBase}/shifts/${editingId.value}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }) }
+  else { const response = await fetch(`${apiBase}/shifts`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); const created = await response.json(); shifts.value.push(created) }
+  showModal.value = false; persist()
+}
+async function removeShift() { shifts.value = shifts.value.filter(s => s.id !== editingId.value); if (editingId.value) await fetch(`${apiBase}/shifts/${editingId.value}`, { method: 'DELETE' }); showModal.value = false; persist() }
 function persist() { localStorage.setItem('russmarket-shifts', JSON.stringify(shifts.value)); saved.value = true; setTimeout(() => saved.value = false, 1800) }
 function applyTemplate() { employees.forEach((employee, i) => { const date = days[(i + 1) % 5].key; shifts.value.push({ id: Date.now() + i, employee, date, kind: 'Дневная', start: '10:00', end: '19:00', color: 'green' }) }); persist() }
 function cell(employee: string, date: string) { return shifts.value.filter(s => s.employee === employee && s.date === date) }
 watch([selectedEmployee, selectedDate], () => { const s = selected.value; if (s && editingId.value) form.value = { kind: s.kind, start: s.start, end: s.end, color: s.color } })
+onMounted(async () => { try { const response = await fetch(`${apiBase}/schedule?week=${days[0].key}`); if (!response.ok) return; const data = await response.json(); if (Array.isArray(data.shifts) && data.shifts.length) { shifts.value = data.shifts.map((s: Shift) => ({ ...s, id: Number(s.id) })); persist() } } catch { /* local seed remains available offline */ } })
 </script>
 
 <template>
